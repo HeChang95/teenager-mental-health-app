@@ -1,6 +1,7 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 
+// Pages
 import HomePage from '../pages/HomePage.vue'
 import ForStudentsPage from '../pages/ForStudentsPage.vue'
 import GetHelpNowPage from '../pages/GetHelpNowPage.vue'
@@ -14,29 +15,38 @@ import NewsUpdatesPage from '../pages/NewsUpdatesPage.vue'
 import ResourcesPage from '../pages/ResourcesPage.vue'
 import AboutUsPage from '../pages/AboutUsPage.vue'
 
+// New for A1.2 (validations + dynamic data)
+import SignUpPage from '../pages/SignUpPage.vue'
+import WellnessCheckPage from '../pages/WellnessCheckPage.vue'
+
+// 404
+import NotFoundPage from '../pages/NotFoundPage.vue'
+
 const routes = [
   { path: '/', name: 'home', component: HomePage },
-  { path: '/for-students', name: 'for-students', component: ForStudentsPage },
-  { path: '/get-help-now', name: 'get-help-now', component: GetHelpNowPage },
-  { path: '/anxiety-management', name: 'anxiety-management', component: AnxietyManagementPage },
-  { path: '/study-support', name: 'study-support', component: StudySupportPage },
-  { path: '/peer-community', name: 'peer-community', component: PeerCommunityPage },
-  { path: '/my-account', name: 'my-account', component: MyAccountPage },
-  { path: '/for-parents', name: 'for-parents', component: ForParentsPage },
-  { path: '/for-educators', name: 'for-educators', component: ForEducatorsPage },
-  { path: '/news-updates', name: 'news-updates', component: NewsUpdatesPage },
-  { path: '/resources', name: 'resources', component: ResourcesPage },
-  { path: '/about-us', name: 'about-us', component: AboutUsPage },
+  { path: '/students', component: ForStudentsPage },
+  { path: '/get-help-now', component: GetHelpNowPage },
+  { path: '/anxiety', component: AnxietyManagementPage },
+  { path: '/study', component: StudySupportPage },
+  { path: '/community', component: PeerCommunityPage },
+  { path: '/account', component: MyAccountPage },
+  { path: '/parents', component: ForParentsPage },
+  { path: '/educators', component: ForEducatorsPage },
+  { path: '/news', component: NewsUpdatesPage },
+  { path: '/resources', component: ResourcesPage },
+  { path: '/about', component: AboutUsPage },
 
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+  // A1.2 new routes
+  { path: '/signup', component: SignUpPage },
+  { path: '/wellness-check', component: WellnessCheckPage },
+
+  // 404 (must be last)
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundPage },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() {
-    return { top: 0 }
-  },
 })
 
 export default router

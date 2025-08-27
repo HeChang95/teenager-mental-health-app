@@ -1,58 +1,55 @@
-<script setup></script>
-
+<!-- src/App.vue -->
 <template>
-  <div class="app">
-    <header class="container">
-      <h1 class="brand">Teen Health App</h1>
-      <nav class="nav">
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/for-students">For Students</RouterLink>
-        <RouterLink to="/get-help-now">Get Help Now</RouterLink>
-        <RouterLink to="/anxiety-management">Anxiety</RouterLink>
-        <RouterLink to="/study-support">Study Support</RouterLink>
-        <RouterLink to="/peer-community">Peer Community</RouterLink>
-        <RouterLink to="/my-account">My Account</RouterLink>
-        <RouterLink to="/for-parents">For Parents</RouterLink>
-        <RouterLink to="/for-educators">For Educators</RouterLink>
-        <RouterLink to="/news-updates">News & Updates</RouterLink>
-        <RouterLink to="/resources">Resources</RouterLink>
-        <RouterLink to="/about-us">About Us</RouterLink>
-      </nav>
-    </header>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container">
+      <RouterLink to="/" class="navbar-brand">Teen Health</RouterLink>
 
-    <main class="container">
-      <RouterView />
-    </main>
-  </div>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navMain"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="navMain" class="collapse navbar-collapse">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/students">For Students</RouterLink>
+          </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/get-help-now">Get Help Now</RouterLink>
+          </li>
+          <li class="nav-item"><RouterLink class="nav-link" to="/anxiety">Anxiety</RouterLink></li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/study">Study Support</RouterLink>
+          </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/community">Peer Community</RouterLink>
+          </li>
+          <li class="nav-item"><RouterLink class="nav-link" to="/news">News</RouterLink></li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/resources">Resources</RouterLink>
+          </li>
+          <li class="nav-item"><RouterLink class="nav-link" to="/about">About</RouterLink></li>
+        </ul>
+
+        <ul class="navbar-nav">
+          <li class="nav-item"><RouterLink class="nav-link" to="/signup">Sign Up</RouterLink></li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/wellness-check">Wellness Check</RouterLink>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <RouterView />
+  </main>
 </template>
 
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 </script>
-
-<style scoped>
-.container {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 16px;
-}
-.brand {
-  margin: 0 0 8px;
-}
-.nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-bottom: 12px;
-}
-.nav a {
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-}
-.nav a.router-link-active {
-  background: #eef2ff;
-  border-color: #6366f1;
-}
-</style>

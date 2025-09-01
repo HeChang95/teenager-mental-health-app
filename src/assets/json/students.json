@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "name": "Alex",
+    "yearLevel": "Year 12",
+    "anxietyLevel": "High",
+    "stressType": "Exam pressure",
+    "subjects": ["Maths", "English"],
+    "helpSeeking": "Time management"
+  }
+]

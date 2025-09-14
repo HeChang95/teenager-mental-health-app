@@ -33,3 +33,4 @@ npm run build
 ```sh
 npm run lint
 ```
+"Add: Firebase setup note (Week 7)" 

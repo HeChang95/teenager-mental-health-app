@@ -53,7 +53,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+// Firebase Auth API
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
+
 const router = useRouter()
+const auth = getAuth()
 
 // form state
 const email = ref('')
@@ -70,7 +75,6 @@ const errors = ref({
   password: null,
 })
 
-// basic email check
 function validateEmail(blurOnly) {
   if (!email.value) {
     errors.value.email = blurOnly ? 'Email is required.' : null
@@ -83,7 +87,6 @@ function validateEmail(blurOnly) {
   errors.value.email = null
 }
 
-// basic password check
 function validatePassword(blurOnly) {
   if (!password.value) {
     errors.value.password = blurOnly ? 'Password is required.' : null
@@ -101,16 +104,13 @@ function clearForm() {
   ok.value = false
 }
 
-function handleLogin() {
+async function handleLogin() {
   loading.value = true
   msg.value = ''
   ok.value = false
 
-  // run validations
   validateEmail(true)
   validatePassword(true)
-
-  // stop if any error
   if (errors.value.email || errors.value.password) {
     loading.value = false
     msg.value = 'Please fix the errors above.'
@@ -118,38 +118,30 @@ function handleLogin() {
     return
   }
 
-  // read users from localStorage
-  let users = []
-  const raw = localStorage.getItem('users')
-  if (raw) {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) {
-      users = parsed
-    }
-  }
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email.value, password.value)
+    localStorage.setItem(
+      'currentUser',
+      JSON.stringify({ email: cred.user.email, uid: cred.user.uid }),
+    )
 
-  // find user
-  let found = null
-  for (let i = 0; i < users.length; i++) {
-    const u = users[i]
-    if (u.email === email.value && u.password === password.value) {
-      found = u
-      break
-    }
-  }
-
-  if (!found) {
     loading.value = false
-    msg.value = 'Invalid email or password.'
+    ok.value = true
+    msg.value = 'Login success (Firebase).'
+    router.push({ name: 'MyAccount' })
+  } catch (error) {
+    loading.value = false
     ok.value = false
-    return
-  }
 
-  // set current user and go to account
-  localStorage.setItem('currentUser', JSON.stringify(found))
-  loading.value = false
-  ok.value = true
-  msg.value = 'Login success.'
-  router.push({ name: 'MyAccount' })
+    const map = {
+      'auth/invalid-email': 'Invalid email format.',
+      'auth/user-disabled': 'This account is disabled.',
+      'auth/user-not-found': 'No user found with this email.',
+      'auth/wrong-password': 'Wrong password.',
+      'auth/too-many-requests': 'Too many attempts. Try again later.',
+    }
+    msg.value = map[error.code] || `Login failed: ${error.code}`
+    console.log('Firebase Sign-in Error:', error)
+  }
 }
 </script>

@@ -115,7 +115,13 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+
 const router = useRouter()
+const auth = getAuth()
+const db = getFirestore()
 
 const form = reactive({
   email: '',
@@ -199,7 +205,7 @@ function clearForm() {
   serverOk.value = false
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   submitting.value = true
   serverMsg.value = ''
   serverOk.value = false
@@ -216,44 +222,40 @@ function handleSubmit() {
     return
   }
 
-  let users = []
-  const raw = localStorage.getItem('users')
-  if (raw) {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) users = parsed
-  }
+  try {
+    // 1) create acount（Auth）
+    const cred = await createUserWithEmailAndPassword(auth, form.email, form.password)
 
-  // email check
-  let duplicated = false
-  for (let i = 0; i < users.length; i++) {
-    if (users[i].email === form.email) {
-      duplicated = true
-      break
-    }
-  }
-  if (duplicated) {
+    // 2) set display name（Auth Profile）
+    const display = form.displayName || form.email.split('@')[0]
+    await updateProfile(cred.user, { displayName: display })
+
+    // 3) save to Firestore
+    await setDoc(doc(db, 'profiles', cred.user.uid), {
+      uid: cred.user.uid,
+      email: cred.user.email,
+      displayName: display,
+      role: form.role,
+      createdAt: serverTimestamp(),
+    })
+
     submitting.value = false
-    serverMsg.value = 'This email has already been registered.'
+    serverOk.value = true
+    serverMsg.value = 'Sign up success!'
+    router.push({ name: 'MyAccount' })
+  } catch (error) {
+    // error display
+    const map = {
+      'auth/email-already-in-use': 'This email has already been registered.',
+      'auth/invalid-email': 'Invalid email format.',
+      'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
+      'auth/weak-password': 'Password is too weak.',
+    }
+    serverMsg.value = map[error.code] || `Sign up failed: ${error.code}`
     serverOk.value = false
-    return
+    submitting.value = false
+    console.log('Firebase Register Error:', error)
   }
-
-  // save new person
-  const newUser = {
-    email: form.email,
-    password: form.password,
-    displayName: form.displayName ? form.displayName : form.email.split('@')[0],
-    role: form.role,
-    createdAt: new Date().toISOString(),
-  }
-  users.push(newUser)
-  localStorage.setItem('users', JSON.stringify(users))
-  localStorage.setItem('currentUser', JSON.stringify(newUser))
-
-  submitting.value = false
-  serverOk.value = true
-  serverMsg.value = 'Sign up success!'
-  router.push({ name: 'MyAccount' })
 }
 </script>
 

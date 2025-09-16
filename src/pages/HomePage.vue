@@ -15,9 +15,9 @@
           <div class="card-body">
             <h3 class="text-primary">FOR STUDENTS</h3>
             <p class="mb-3">Get help with exam worry and study problems</p>
-            <router-link class="btn btn-primary" :to="{ name: 'ForStudents' }"
-              >Get Help Now</router-link
-            >
+            <router-link class="btn btn-primary" :to="{ name: 'ForStudents' }">
+              Get Help Now
+            </router-link>
           </div>
         </div>
       </div>
@@ -27,9 +27,9 @@
           <div class="card-body">
             <h3 class="text-warning">FOR PARENTS</h3>
             <p class="mb-3">Learn how to help your child with exam stress</p>
-            <router-link class="btn btn-warning" :to="{ name: 'ForParents' }"
-              >Parent Help</router-link
-            >
+            <router-link class="btn btn-warning" :to="{ name: 'ForParents' }">
+              Parent Help
+            </router-link>
           </div>
         </div>
       </div>
@@ -39,9 +39,9 @@
           <div class="card-body">
             <h3 class="text-info">FOR EDUCATORS</h3>
             <p class="mb-3">Tools to help students with mental health</p>
-            <router-link class="btn btn-info" :to="{ name: 'ForEducators' }"
-              >Teacher Tools</router-link
-            >
+            <router-link class="btn btn-info" :to="{ name: 'ForEducators' }">
+              Teacher Tools
+            </router-link>
           </div>
         </div>
       </div>
@@ -89,14 +89,41 @@
         </div>
       </div>
     </div>
+
+    <!-- access denied notice (bottom) -->
+    <div v-if="denied" class="alert alert-warning mt-4" role="alert">
+      You don’t have permission to access that page. Please sign in with the correct role.
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import studentJson from '@/assets/json/students.json'
 import resourceJson from '@/assets/json/resources.json'
 
 const studentList = ref(studentJson)
 const resourceList = ref(resourceJson)
+
+// handle denied=1, give a singn
+const route = useRoute()
+const router = useRouter()
+const denied = ref(false)
+
+function syncDeniedFromQuery() {
+  const v = route.query.denied
+  denied.value = v === '1' || v === 1 || v === true
+  // clear the query after few second，avoid show it all the time
+  if (denied.value) {
+    setTimeout(() => {
+      const q = { ...route.query }
+      delete q.denied
+      router.replace({ query: q })
+    }, 3500)
+  }
+}
+
+onMounted(syncDeniedFromQuery)
+watch(() => route.query.denied, syncDeniedFromQuery)
 </script>

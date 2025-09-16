@@ -4,8 +4,11 @@
       <h2 class="mb-3">Log in</h2>
       <p class="text-muted">Welcome back!</p>
 
+      <div v-if="$route.query.denied" class="alert alert-warning mb-3">
+        Please log in to continue.
+      </div>
+
       <form @submit.prevent="handleLogin">
-        <!-- Email -->
         <div class="mb-3">
           <label for="lemail" class="form-label">Email *</label>
           <input
@@ -19,7 +22,6 @@
           <small v-if="errors.email" class="text-danger">{{ errors.email }}</small>
         </div>
 
-        <!-- Password -->
         <div class="mb-3">
           <label for="lpwd" class="form-label">Password *</label>
           <input
@@ -33,7 +35,6 @@
           <small v-if="errors.password" class="text-danger">{{ errors.password }}</small>
         </div>
 
-        <!-- Actions -->
         <div class="d-flex gap-2">
           <button class="btn btn-primary" type="submit" :disabled="loading">
             {{ loading ? 'Checking...' : 'Log in' }}
@@ -41,7 +42,6 @@
           <button class="btn btn-outline-secondary" type="button" @click="clearForm">Clear</button>
         </div>
 
-        <!-- Message -->
         <div v-if="msg" class="alert mt-3" :class="ok ? 'alert-success' : 'alert-danger'">
           {{ msg }}
         </div>
@@ -53,27 +53,18 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-// Firebase Auth API
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '@/firebase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 
 const router = useRouter()
-const auth = getAuth()
 
-// form state
 const email = ref('')
 const password = ref('')
-
-// ui state
 const loading = ref(false)
 const msg = ref('')
 const ok = ref(false)
 
-// simple errors object
-const errors = ref({
-  email: null,
-  password: null,
-})
+const errors = ref({ email: null, password: null })
 
 function validateEmail(blurOnly) {
   if (!email.value) {
@@ -114,25 +105,28 @@ async function handleLogin() {
   if (errors.value.email || errors.value.password) {
     loading.value = false
     msg.value = 'Please fix the errors above.'
-    ok.value = false
     return
   }
 
   try {
     const cred = await signInWithEmailAndPassword(auth, email.value, password.value)
+
+    // After successful login
     localStorage.setItem(
       'currentUser',
-      JSON.stringify({ email: cred.user.email, uid: cred.user.uid }),
+      JSON.stringify({
+        email: cred.user.email,
+        uid: cred.user.uid,
+        displayName: cred.user.displayName || '',
+      }),
     )
-
+    // Tell App.vue to refresh the navigation bar
+    window.dispatchEvent(new Event('auth-changed'))
     loading.value = false
-    ok.value = true
+    ok.value = false
     msg.value = 'Login success (Firebase).'
     router.push({ name: 'MyAccount' })
   } catch (error) {
-    loading.value = false
-    ok.value = false
-
     const map = {
       'auth/invalid-email': 'Invalid email format.',
       'auth/user-disabled': 'This account is disabled.',

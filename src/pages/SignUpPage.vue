@@ -115,13 +115,10 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { auth } from '@/firebase'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 
 const router = useRouter()
-const auth = getAuth()
-const db = getFirestore()
 
 const form = reactive({
   email: '',
@@ -210,6 +207,7 @@ async function handleSubmit() {
   serverMsg.value = ''
   serverOk.value = false
 
+  // Run Verification
   validateEmail(true)
   validatePassword(true)
   validateAgree()
@@ -223,38 +221,35 @@ async function handleSubmit() {
   }
 
   try {
-    // 1) create acount（Auth）
+    // 1) Create an account in Auth
     const cred = await createUserWithEmailAndPassword(auth, form.email, form.password)
 
-    // 2) set display name（Auth Profile）
+    // 2) set displayName（Auth Profile）
     const display = form.displayName || form.email.split('@')[0]
     await updateProfile(cred.user, { displayName: display })
 
-    // 3) save to Firestore
-    await setDoc(doc(db, 'profiles', cred.user.uid), {
-      uid: cred.user.uid,
-      email: cred.user.email,
-      displayName: display,
-      role: form.role,
-      createdAt: serverTimestamp(),
-    })
+    // 3) Temporarily save "role" and "current user" to localStorage
+    localStorage.setItem('userRole', form.role)
+    localStorage.setItem(
+      'currentUser',
+      JSON.stringify({ email: cred.user.email, uid: cred.user.uid, displayName: display }),
+    )
+    window.dispatchEvent(new Event('auth-changed'))
 
-    submitting.value = false
     serverOk.value = true
     serverMsg.value = 'Sign up success!'
     router.push({ name: 'MyAccount' })
   } catch (error) {
-    // error display
     const map = {
       'auth/email-already-in-use': 'This email has already been registered.',
       'auth/invalid-email': 'Invalid email format.',
-      'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
       'auth/weak-password': 'Password is too weak.',
+      'auth/operation-not-allowed': 'Email/password sign-in is not enabled.',
     }
     serverMsg.value = map[error.code] || `Sign up failed: ${error.code}`
     serverOk.value = false
+  } finally {
     submitting.value = false
-    console.log('Firebase Register Error:', error)
   }
 }
 </script>

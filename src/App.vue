@@ -32,9 +32,12 @@
         <!-- Right side account -->
         <div class="d-flex gap-2">
           <template v-if="isLoggedIn">
-            <router-link class="btn btn-outline-secondary btn-sm" :to="{ name: 'MyAccount' }">
-              My Account
-            </router-link>
+            <span class="badge bg-secondary align-self-center me-2"
+              >Role: {{ role || 'unknown' }}</span
+            >
+            <router-link class="btn btn-outline-secondary btn-sm" :to="{ name: 'MyAccount' }"
+              >My Account</router-link
+            >
             <button class="btn btn-outline-danger btn-sm" @click="logout">Log out</button>
           </template>
           <template v-else>
@@ -57,32 +60,62 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const isLoggedIn = ref(false)
 
-onMounted(() => {
-  const raw = localStorage.getItem('currentUser')
-  if (raw) {
-    const obj = JSON.parse(raw)
-    if (obj && obj.email) {
-      isLoggedIn.value = true
-    } else {
-      isLoggedIn.value = false
-      localStorage.removeItem('currentUser')
-    }
-  } else {
-    isLoggedIn.value = false
-  }
+const isLoggedIn = ref(false)
+const userName = ref('')
+
+const role = ref(localStorage.getItem('userRole') || '')
+window.addEventListener('auth-changed', () => {
+  isLoggedIn.value = !!localStorage.getItem('currentUser')
+  role.value = localStorage.getItem('userRole') || ''
 })
+
+function readUser() {
+  const raw = localStorage.getItem('currentUser')
+  if (!raw) {
+    isLoggedIn.value = false
+    userName.value = ''
+    return
+  }
+  try {
+    const u = JSON.parse(raw)
+    isLoggedIn.value = !!u?.email
+    userName.value = u.displayName || u.email?.split('@')[0] || 'User'
+  } catch {
+    isLoggedIn.value = false
+    userName.value = ''
+  }
+}
 
 function logout() {
   localStorage.removeItem('currentUser')
-  isLoggedIn.value = false
+  // tell others to refresh
+  window.dispatchEvent(new Event('auth-changed'))
+  readUser()
   router.push({ name: 'Home' })
 }
+
+const onAuthChanged = () => readUser()
+
+onMounted(() => {
+  readUser()
+  // Receive custom events when logging in/out on the same page
+  window.addEventListener('auth-changed', onAuthChanged)
+  // Sync across tabs
+  window.addEventListener('storage', onAuthChanged)
+  // Refresh once when the route is switched
+  // to prevent some navigation paths from not receiving events
+  router.afterEach(() => readUser())
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('auth-changed', onAuthChanged)
+  window.removeEventListener('storage', onAuthChanged)
+})
 </script>
 
 <style>

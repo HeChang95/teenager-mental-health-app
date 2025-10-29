@@ -1,4 +1,3 @@
-import axios from 'axios'
 export async function sendMail({ fromEmail, subject, message, file }) {
   const base = window.FUNCTIONS_BASE_URL
   const url = `${base}/sendMail`

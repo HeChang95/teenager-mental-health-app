@@ -1,4 +1,3 @@
-// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { auth } from '@/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -52,7 +51,7 @@ const routes = [
     path: '/account',
     name: 'MyAccount',
     component: MyAccountPage,
-    meta: { requiresAuth: true, roles: ['student', 'parent'] },
+    meta: { requiresAuth: true, roles: ['student', 'parent', 'educator'] },
   },
 
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundPage },
@@ -61,7 +60,7 @@ const routes = [
     path: '/my-tasks',
     name: 'StudyTasks',
     component: StudyTasksTable,
-    meta: { requiresAuth: true, roles: ['student', 'parent'] },
+    meta: { requiresAuth: true, roles: ['student', 'parent', 'educator'] },
   },
 ]
 

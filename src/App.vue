@@ -45,9 +45,8 @@
         <!-- Right side account -->
         <div class="d-flex gap-2">
           <template v-if="isLoggedIn">
-            <span class="badge bg-secondary align-self-center me-2"
-              >Role: {{ role || 'unknown' }}</span
-            >
+            <span class="badge bg-primary align-self-center me-2"> My TODOs: {{ myTodo }} </span>
+
             <router-link class="btn btn-outline-secondary btn-sm" :to="{ name: 'MyAccount' }"
               >My Account</router-link
             >
@@ -85,8 +84,46 @@ const router = useRouter()
 //  Auth state
 const isLoggedIn = ref(false)
 const userName = ref('')
-const role = ref(localStorage.getItem('userRole') || '') // 角色仍按你的实现从本地存储读取
+const role = ref(localStorage.getItem('userRole') || '') // student, parent, educator
 const loggingOut = ref(false)
+//My TODOs count (localStorage + events)
+const myTodo = ref(0)
+
+function readTodos() {
+  try {
+    const raw = localStorage.getItem('todos')
+    const list = raw ? JSON.parse(raw) : []
+    myTodo.value = Array.isArray(list) ? list.length : 0
+  } catch {
+    myTodo.value = 0
+  }
+}
+
+const onTodosChanged = () => readTodos()
+
+// read user & todos from localStorage
+function readUserFromStorage() {
+  const raw = localStorage.getItem('currentUser')
+  if (!raw) {
+    isLoggedIn.value = false
+    userName.value = ''
+    return
+  }
+  try {
+    const u = JSON.parse(raw)
+    isLoggedIn.value = !!u?.email
+    userName.value = u.displayName || (u.email ? u.email.split('@')[0] : 'User')
+  } catch {
+    isLoggedIn.value = false
+    userName.value = ''
+  }
+}
+
+const onAuthChanged = () => {
+  readUserFromStorage()
+  role.value = localStorage.getItem('userRole') || ''
+  readTodos()
+}
 
 //  Synchronize user state to local storage and reactive variables
 function syncUser(u) {
@@ -110,10 +147,18 @@ function onStorage(e) {
   if (e.key === 'userRole') {
     role.value = localStorage.getItem('userRole') || ''
   }
+  if (e.key === 'currentUser') {
+    readUserFromStorage()
+  }
+  if (e.key === 'todos' || e.key === null) {
+    readTodos()
+  }
 }
 
 let un // unsubscribe function
+
 onMounted(() => {
+  // Firebase auth listener
   un = onAuthStateChanged(auth, (u) => {
     try {
       syncUser(u)
@@ -121,11 +166,29 @@ onMounted(() => {
       console.error('Error syncing auth state:', err)
     }
   })
+
+  readUserFromStorage()
+  role.value = localStorage.getItem('userRole') || ''
+  readTodos()
+
+  window.addEventListener('auth-changed', onAuthChanged)
+  window.addEventListener('todos-changed', onTodosChanged)
+
+  //  Listen to storage events to update role across tabs
   window.addEventListener('storage', onStorage)
+
+  // 5) On each route change, read user & role from localStorage
+  router.afterEach(() => {
+    readUserFromStorage()
+    role.value = localStorage.getItem('userRole') || ''
+    readTodos()
+  })
 })
 
 onBeforeUnmount(() => {
   if (un) un()
+  window.removeEventListener('auth-changed', onAuthChanged)
+  window.removeEventListener('todos-changed', onTodosChanged)
   window.removeEventListener('storage', onStorage)
 })
 

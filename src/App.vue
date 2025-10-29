@@ -33,11 +33,6 @@
             >
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" :to="{ name: 'ResourcesTable' }"
-              >Resource Table</router-link
-            >
-          </li>
-          <li class="nav-item">
             <router-link class="nav-link" :to="{ name: 'StudyTasks' }">My Tasks</router-link>
           </li>
         </ul>

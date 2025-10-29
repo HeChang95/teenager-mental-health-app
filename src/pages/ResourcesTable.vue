@@ -59,9 +59,10 @@
 
 <script setup>
 // Vue page showing a Firestore-backed resource library with DataTables.
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 import axios from 'axios'
+import { initDataTable } from '@/services/table'
 
 const db = getFirestore()
 const rows = ref([])
@@ -71,11 +72,7 @@ const error = ref('')
 let dt = null
 
 function functionsBase() {
-  // Return Cloud Functions base URL for dev/prod.
-  const dev = import.meta.env.DEV
-  return dev
-    ? 'http://127.0.0.1:5001/teenager-mental-health-app/us-central1'
-    : 'https://us-central1-teenager-mental-health-app.cloudfunctions.net'
+  return window.FUNCTIONS_BASE_URL
 }
 
 async function refreshCount() {
@@ -90,7 +87,7 @@ async function refreshCount() {
 }
 
 async function loadData() {
-  //EN: Load up to 200 newest resources from Firestore
+  //Load up to 200 newest resources from Firestore
   error.value = ''
   rows.value = []
   try {
@@ -98,27 +95,16 @@ async function loadData() {
     const snap = await getDocs(q)
     rows.value = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     await nextTick()
-    initDataTable()
+    // Use shared initializer from @/services/table (includes column-wise search)
+    if (dt && dt.destroy) dt.destroy()
+    dt = initDataTable('#resTable', {
+      pageLength: 10,
+      order: [], // no default ordering
+    })
   } catch (e) {
     console.error('Error loading resources:', e)
     error.value = 'Failed to load resources.'
   }
-}
-
-function initDataTable() {
-  // Initialize DataTables and wire column-wise search
-  if (dt && dt.destroy) dt.destroy()
-  // eslint-disable-next-line no-undef
-  dt = new DataTable('#resTable', {
-    pageLength: 10,
-    order: [], // no default ordering
-  })
-  const header = document.querySelectorAll('#resTable thead th')
-  header.forEach((th, idx) => {
-    const input = th.querySelector('input')
-    if (!input) return
-    input.addEventListener('keyup', () => dt.column(idx).search(input.value).draw())
-  })
 }
 
 onMounted(async () => {
@@ -127,4 +113,8 @@ onMounted(async () => {
 })
 
 watch(topicFilter, refreshCount)
+
+onBeforeUnmount(() => {
+  if (dt && dt.destroy) dt.destroy()
+})
 </script>

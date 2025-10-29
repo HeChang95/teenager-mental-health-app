@@ -2,6 +2,37 @@
   <div class="container py-4">
     <h1 class="mb-3">Wellness Check</h1>
 
+    <!-- Weather widget -->
+    <section class="card p-3 mb-4">
+      <h5 class="mb-3">Today’s Weather & Study Brief</h5>
+      <div class="d-flex gap-2">
+        <input class="form-control" v-model="city" placeholder="Enter city (e.g., Melbourne)" />
+        <button class="btn btn-primary" @click="fetchTodayWeather" :disabled="loading">
+          {{ loading ? 'Checking...' : 'Check' }}
+        </button>
+      </div>
+
+      <div v-if="error" class="alert alert-danger mt-3">{{ error }}</div>
+
+      <div v-if="weather" class="mt-3">
+        <div class="fw-bold mb-1">{{ weather.city || city }}</div>
+        <div class="text-muted mb-2">
+          {{ weather.desc }} — Temp: {{ weather.temp }}°C, Humidity: {{ weather.humidity }}%, Wind:
+          {{ weather.wind }} m/s
+        </div>
+
+        <div v-if="weather.risks?.length">
+          <span class="badge bg-warning text-dark me-2" v-for="(r, i) in weather.risks" :key="i">{{
+            r
+          }}</span>
+        </div>
+
+        <ul class="mt-2">
+          <li v-for="(a, i) in weather.advice" :key="i">{{ a }}</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- form -->
     <form @submit.prevent="submit">
       <div class="row g-3">
@@ -96,8 +127,14 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useWellness } from '@/stores/wellness'
+
+const base = window.FUNCTIONS_BASE_URL
+const city = ref('')
+const loading = ref(false)
+const error = ref('')
+const weather = ref(null)
 
 const { entries, addEntry, clearAll } = useWellness()
 
@@ -169,5 +206,26 @@ function reset() {
 function formatDate(iso) {
   const d = new Date(iso)
   return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+}
+
+async function fetchTodayWeather() {
+  error.value = ''
+  weather.value = null
+  if (!city.value.trim()) {
+    error.value = 'Please enter a city.'
+    return
+  }
+  loading.value = true
+  try {
+    const res = await fetch(`${base}/weatherBrief?city=${encodeURIComponent(city.value.trim())}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    weather.value = data // { temp, feels_like, main, description, icon, city, country }
+  } catch (e) {
+    console.error('Error fetching weather: ', e)
+    error.value = 'Failed to fetch weather. Please try again later.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>

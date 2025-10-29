@@ -33,7 +33,12 @@ const routes = [
     component: ForParentsPage,
     meta: { requiresAuth: true, roles: ['parent'] },
   },
-  { path: '/educators', name: 'ForEducators', component: ForEducatorsPage },
+  {
+    path: '/educators',
+    name: 'ForEducators',
+    component: ForEducatorsPage,
+    meta: { requiresAuth: true, roles: ['educator'] },
+  },
   { path: '/news', name: 'NewsUpdates', component: NewsUpdatesPage },
   { path: '/resources', name: 'Resources', component: ResourcesPage },
   { path: '/about', name: 'AboutUs', component: AboutUsPage },

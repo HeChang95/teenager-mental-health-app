@@ -4,8 +4,7 @@
       <h2 class="mb-3">Create your account</h2>
       <p class="text-muted">Sign up to save your tools and progress.</p>
 
-      <form @submit.prevent="handleSubmit">
-        <!-- Email -->
+      <form @submit.prevent="handleSubmit" novalidate>
         <div class="mb-3">
           <label class="form-label" for="email">Email *</label>
           <input
@@ -15,12 +14,12 @@
             v-model="form.email"
             @input="validateEmail(false)"
             @blur="validateEmail(true)"
+            required
           />
           <small v-if="errors.email" class="text-danger">{{ errors.email }}</small>
           <small v-else-if="ok.email" class="text-success">Looks good.</small>
         </div>
 
-        <!-- Password -->
         <div class="mb-3">
           <label class="form-label" for="pwd">Password *</label>
           <input
@@ -30,20 +29,20 @@
             v-model="form.password"
             @input="validatePassword(false)"
             @blur="validatePassword(true)"
+            minlength="8"
+            required
           />
           <small v-if="errors.password" class="text-danger">{{ errors.password }}</small>
           <small v-else-if="ok.password" class="text-success">Strong enough.</small>
         </div>
 
-        <!-- Display name -->
         <div class="mb-3">
           <label class="form-label" for="name">Display name (optional)</label>
           <input id="name" type="text" class="form-control" v-model="form.displayName" />
         </div>
 
-        <!-- Role -->
         <div class="mb-3">
-          <label class="form-label d-block">Role *</label>
+          <span class="form-label d-block">Role *</span>
 
           <div class="form-check form-check-inline">
             <input
@@ -54,6 +53,7 @@
               value="student"
               v-model="form.role"
               @change="validateRole()"
+              required
             />
             <label class="form-check-label" for="role-student">Student</label>
           </div>
@@ -67,6 +67,7 @@
               value="parent"
               v-model="form.role"
               @change="validateRole()"
+              required
             />
             <label class="form-check-label" for="role-parent">Parent</label>
           </div>
@@ -84,6 +85,7 @@
             id="agree"
             v-model="form.agree"
             @change="validateAgree()"
+            required
           />
           <label class="form-check-label" for="agree">I agree to the Terms and Privacy.</label>
           <div>
@@ -96,7 +98,14 @@
           <button class="btn btn-primary" type="submit" :disabled="submitting">
             {{ submitting ? 'Submitting...' : 'Sign up' }}
           </button>
-          <button class="btn btn-outline-secondary" type="button" @click="clearForm">Clear</button>
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            @click="clearForm"
+            :disabled="submitting"
+          >
+            Clear
+          </button>
         </div>
 
         <!-- Message -->
@@ -104,6 +113,7 @@
           v-if="serverMsg"
           class="alert mt-3"
           :class="serverOk ? 'alert-success' : 'alert-danger'"
+          role="alert"
         >
           {{ serverMsg }}
         </div>
@@ -113,10 +123,10 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '@/firebase'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth'
 
 const router = useRouter()
 
@@ -125,7 +135,7 @@ const form = reactive({
   password: '',
   displayName: '',
   agree: false,
-  role: '', // 'student' | 'parent'
+  role: '', // student or parent
 })
 
 const errors = reactive({
@@ -228,12 +238,11 @@ async function handleSubmit() {
     const display = form.displayName || form.email.split('@')[0]
     await updateProfile(cred.user, { displayName: display })
 
-    // 3) Temporarily save "role" and "current user" to localStorage
+    // 3) Cache role + a lightweight user for header usage
+    const lite = { email: cred.user.email, uid: cred.user.uid, displayName: display }
     localStorage.setItem('userRole', form.role)
-    localStorage.setItem(
-      'currentUser',
-      JSON.stringify({ email: cred.user.email, uid: cred.user.uid, displayName: display }),
-    )
+    localStorage.setItem('currentUser', JSON.stringify(lite))
+    localStorage.setItem('__cached_auth_user__', JSON.stringify(lite))
     window.dispatchEvent(new Event('auth-changed'))
 
     serverOk.value = true
@@ -248,10 +257,18 @@ async function handleSubmit() {
     }
     serverMsg.value = map[error.code] || `Sign up failed: ${error.code}`
     serverOk.value = false
+    console.error('Error signing up:', error)
   } finally {
     submitting.value = false
   }
 }
+
+// If the user is logged in ,jump directly
+onMounted(() => {
+  onAuthStateChanged(auth, (u) => {
+    if (u) router.push({ name: 'MyAccount' })
+  })
+})
 </script>
 
 <style>

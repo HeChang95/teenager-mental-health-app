@@ -18,6 +18,7 @@
             v-model="email"
             @blur="validateEmail(true)"
             @input="validateEmail(false)"
+            required
           />
           <small v-if="errors.email" class="text-danger">{{ errors.email }}</small>
         </div>
@@ -31,6 +32,7 @@
             v-model="password"
             @blur="validatePassword(true)"
             @input="validatePassword(false)"
+            required
           />
           <small v-if="errors.password" class="text-danger">{{ errors.password }}</small>
         </div>
@@ -39,7 +41,14 @@
           <button class="btn btn-primary" type="submit" :disabled="loading">
             {{ loading ? 'Checking...' : 'Log in' }}
           </button>
-          <button class="btn btn-outline-secondary" type="button" @click="clearForm">Clear</button>
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            @click="clearForm"
+            :disabled="loading"
+          >
+            Clear
+          </button>
         </div>
 
         <div v-if="msg" class="alert mt-3" :class="ok ? 'alert-success' : 'alert-danger'">
@@ -51,10 +60,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '@/firebase'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
 
 const router = useRouter()
 
@@ -63,7 +72,6 @@ const password = ref('')
 const loading = ref(false)
 const msg = ref('')
 const ok = ref(false)
-
 const errors = ref({ email: null, password: null })
 
 function validateEmail(blurOnly) {
@@ -103,27 +111,24 @@ async function handleLogin() {
   validateEmail(true)
   validatePassword(true)
   if (errors.value.email || errors.value.password) {
-    loading.value = false
     msg.value = 'Please fix the errors above.'
+    loading.value = false
     return
   }
 
   try {
     const cred = await signInWithEmailAndPassword(auth, email.value, password.value)
+    const lite = {
+      email: cred.user.email,
+      uid: cred.user.uid,
+      displayName: cred.user.displayName || '',
+    }
 
-    // After successful login
-    localStorage.setItem(
-      'currentUser',
-      JSON.stringify({
-        email: cred.user.email,
-        uid: cred.user.uid,
-        displayName: cred.user.displayName || '',
-      }),
-    )
-    // Tell App.vue to refresh the navigation bar
+    localStorage.setItem('currentUser', JSON.stringify(lite))
+    localStorage.setItem('__cached_auth_user__', JSON.stringify(lite))
+
     window.dispatchEvent(new Event('auth-changed'))
-    loading.value = false
-    ok.value = false
+    ok.value = true
     msg.value = 'Login success (Firebase).'
     router.push({ name: 'MyAccount' })
   } catch (error) {
@@ -135,7 +140,16 @@ async function handleLogin() {
       'auth/too-many-requests': 'Too many attempts. Try again later.',
     }
     msg.value = map[error.code] || `Login failed: ${error.code}`
-    console.log('Firebase Sign-in Error:', error)
+    console.error('Error logging in:', error)
+  } finally {
+    loading.value = false
   }
 }
+
+// If logged in, it will be redirected to the account page directly; and also be automatically recognized after refreshing.
+onMounted(() => {
+  onAuthStateChanged(auth, (u) => {
+    if (u) router.push({ name: 'MyAccount' })
+  })
+})
 </script>

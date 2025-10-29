@@ -27,6 +27,19 @@
           <li class="nav-item">
             <router-link class="nav-link" :to="{ name: 'AboutUs' }">About Us</router-link>
           </li>
+          <li class="nav-item">
+            <router-link class="nav-link" :to="{ name: 'ResourcesTable' }"
+              >Resource Table</router-link
+            >
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link" :to="{ name: 'ResourcesTable' }"
+              >Resource Table</router-link
+            >
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link" :to="{ name: 'StudyTasks' }">My Tasks</router-link>
+          </li>
         </ul>
 
         <!-- Right side account -->
@@ -38,7 +51,9 @@
             <router-link class="btn btn-outline-secondary btn-sm" :to="{ name: 'MyAccount' }"
               >My Account</router-link
             >
-            <button class="btn btn-outline-danger btn-sm" @click="logout">Log out</button>
+            <button class="btn btn-outline-danger btn-sm" @click="logout" :disabled="loggingOut">
+              Log out
+            </button>
           </template>
           <template v-else>
             <router-link class="btn btn-outline-primary btn-sm" :to="{ name: 'Login' }"
@@ -62,60 +77,70 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { auth } from '@/firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 
 const router = useRouter()
 
+//  Auth state
 const isLoggedIn = ref(false)
 const userName = ref('')
+const role = ref(localStorage.getItem('userRole') || '') // 角色仍按你的实现从本地存储读取
+const loggingOut = ref(false)
 
-const role = ref(localStorage.getItem('userRole') || '')
-window.addEventListener('auth-changed', () => {
-  isLoggedIn.value = !!localStorage.getItem('currentUser')
-  role.value = localStorage.getItem('userRole') || ''
-})
-
-function readUser() {
-  const raw = localStorage.getItem('currentUser')
-  if (!raw) {
-    isLoggedIn.value = false
-    userName.value = ''
-    return
-  }
-  try {
-    const u = JSON.parse(raw)
-    isLoggedIn.value = !!u?.email
-    userName.value = u.displayName || u.email?.split('@')[0] || 'User'
-  } catch {
+//  Synchronize user state to local storage and reactive variables
+function syncUser(u) {
+  if (u) {
+    const lite = { uid: u.uid, email: u.email, displayName: u.displayName || '' }
+    localStorage.setItem('currentUser', JSON.stringify(lite))
+    localStorage.setItem('__cached_auth_user__', JSON.stringify(lite))
+    isLoggedIn.value = true
+    userName.value = lite.displayName || (lite.email ? lite.email.split('@')[0] : 'User')
+  } else {
+    localStorage.removeItem('currentUser')
+    localStorage.removeItem('__cached_auth_user__')
     isLoggedIn.value = false
     userName.value = ''
   }
-}
-
-function logout() {
-  localStorage.removeItem('currentUser')
-  // tell others to refresh
   window.dispatchEvent(new Event('auth-changed'))
-  readUser()
-  router.push({ name: 'Home' })
 }
 
-const onAuthChanged = () => readUser()
+// Listen to storage events to update role across tabs
+function onStorage(e) {
+  if (e.key === 'userRole') {
+    role.value = localStorage.getItem('userRole') || ''
+  }
+}
 
+let un // unsubscribe function
 onMounted(() => {
-  readUser()
-  // Receive custom events when logging in/out on the same page
-  window.addEventListener('auth-changed', onAuthChanged)
-  // Sync across tabs
-  window.addEventListener('storage', onAuthChanged)
-  // Refresh once when the route is switched
-  // to prevent some navigation paths from not receiving events
-  router.afterEach(() => readUser())
+  un = onAuthStateChanged(auth, (u) => {
+    try {
+      syncUser(u)
+    } catch (err) {
+      console.error('Error syncing auth state:', err)
+    }
+  })
+  window.addEventListener('storage', onStorage)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('auth-changed', onAuthChanged)
-  window.removeEventListener('storage', onAuthChanged)
+  if (un) un()
+  window.removeEventListener('storage', onStorage)
 })
+
+// Log out function
+async function logout() {
+  loggingOut.value = true
+  try {
+    await signOut(auth)
+  } catch (e) {
+    console.error('Error logging out:', e)
+  } finally {
+    loggingOut.value = false
+    router.push({ name: 'Home' })
+  }
+}
 </script>
 
 <style>

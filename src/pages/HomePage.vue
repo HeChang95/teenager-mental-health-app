@@ -3,7 +3,7 @@
     <!-- titles -->
     <div class="row mb-5">
       <div class="col-12 text-center">
-        <h1 class="display-5 mb-2">Youth Mental Health Support</h1>
+        <h1 class="display-5 mb-2">Teenager Mental Health Support</h1>
         <p class="text-muted">Help for VCE students with exam stress and worry</p>
       </div>
     </div>

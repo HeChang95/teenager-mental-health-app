@@ -90,8 +90,8 @@ function currentUid() {
 function functionsBase() {
   const dev = import.meta.env.DEV
   return dev
-    ? 'http://127.0.0.1:5001/teenager-mental-health-app/us-central1'
-    : 'https://us-central1-teenager-mental-health-app.cloudfunctions.net'
+    ? 'http://127.0.0.1:5001/teenager-mental-health-app/australia-southeast2'
+    : 'https://australia-southeast2-teenager-mental-health-app.cloudfunctions.net'
 }
 
 async function refreshMyTodo() {
